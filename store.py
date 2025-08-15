@@ -140,7 +140,7 @@ def upload(username):
     
     file.seek(0)
     file.save(file_path)
-    FILE_OWNERS[file_hash] = username
+    FILE_OWNERS[file_hash] = {"username": username, "filename": file.filename}
     
     return {"hash": file_hash}, 201
 
@@ -149,7 +149,9 @@ def download(file_hash):
     file_path = get_filepath(file_hash)
     if not file_path.exists():
         abort(404, description="Файл не найден!")
-    return send_file(file_path, as_attachment=True)
+    
+    original_filename = FILE_OWNERS.get(file_hash, {}).get("filename", file_hash)
+    return send_file(file_path, as_attachment=True, download_name=original_filename)
 
 @app.route('/delete/<file_hash>', methods=['DELETE'])
 @auth_required
@@ -157,7 +159,7 @@ def delete(username, file_hash):
     file_path = get_filepath(file_hash)
     if not file_path.exists():
         abort(404, description="Файл не найден!")
-    if file_hash not in FILE_OWNERS or FILE_OWNERS[file_hash] != username:
+    if file_hash not in FILE_OWNERS or FILE_OWNERS[file_hash]["username"] != username:
         abort(403, description="Это не твой файл!")
     
     file_path.unlink()
